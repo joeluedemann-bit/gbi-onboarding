@@ -7,6 +7,7 @@ import { Hoehenplan } from "./komponenten/Hoehenplan";
 import type { KiNachricht } from "./komponenten/KiAssistent";
 import { Lageplan } from "./komponenten/Lageplan";
 import { Seitenleiste } from "./komponenten/Seitenleiste";
+import { VORSCHAU, VORSCHAU_HINWEIS } from "./vorschau";
 import { type Modus, useProjekt } from "./zustand";
 
 export function App() {
@@ -74,6 +75,7 @@ export function App() {
       <header className="kopf">
         <div className="marke">
           <strong>GBI</strong> Straßenplanung
+          {VORSCHAU && <span className="vorschau-marke" title={VORSCHAU_HINWEIS}>Vorschau</span>}
         </div>
         <input
           className="projektname"
@@ -97,7 +99,7 @@ export function App() {
             <button onClick={oeffnen} title="GBI-Projekt (.json), LandXML (.xml), VESTRA-Achsliste (AXEL….LST) oder Geländepunkte (.csv/.txt)">
               Öffnen / Import
             </button>
-            <button onClick={() => projektSpeichern(projekt)}>Speichern</button>
+            <button onClick={async () => { const t = await projektSpeichern(projekt); if (t) meldung(t); }}>Speichern</button>
 <ExportMenue projekt={projekt} ergebnis={ergebnis} meldung={meldung} />
           </div>
           <div className="gruppe">

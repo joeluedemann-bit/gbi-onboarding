@@ -1,5 +1,48 @@
 import { type Gelaendepunkt, type Projekt, importiereLandXml, importiereVestraAchsliste } from "@gbi/kern";
 
+interface DownloadsNamespace {
+  save(r: { filename: string; data: string | Uint8Array }): Promise<{ status: string }>;
+}
+declare global {
+  interface Window {
+    claude?: { use(name: string): Promise<unknown> };
+  }
+}
+
+// Dateitypen, die eine eingebettete Vorschau (claude.ai) direkt anbieten darf
+const VORSCHAU_ENDUNGEN = ["txt", "json", "md", "csv", "html", "svg", "pdf", "zip"];
+
+/**
+ * Bietet eine Datei zum Speichern an. In der eingebetteten Vorschau über die
+ * Downloads-Freigabe der Seite (Dateitypen außerhalb der Liste werden als ZIP
+ * verpackt), sonst als normaler Browser-Download. Liefert eine Meldung für die
+ * Oberfläche oder null.
+ */
+export async function anbieten(name: string, inhalt: string | Uint8Array, typ = "application/octet-stream"): Promise<string | null> {
+  const downloads = window.claude ? ((await window.claude.use("downloads").catch(() => null)) as DownloadsNamespace | null) : null;
+  if (!downloads) {
+    herunterladen(name, inhalt, typ);
+    return null;
+  }
+  let dateiname = name;
+  let daten: string | Uint8Array = inhalt;
+  const endung = name.split(".").pop()?.toLowerCase() ?? "";
+  if (!VORSCHAU_ENDUNGEN.includes(endung)) {
+    const { erzeugeZip } = await import("./zip");
+    daten = erzeugeZip([{ name, daten: inhalt }]);
+    dateiname = `${name}.zip`;
+  }
+  try {
+    await downloads.save({ filename: dateiname, data: daten });
+    return dateiname === name ? null : `${name} als ZIP gespeichert`;
+  } catch (e) {
+    const code = (e as { code?: string }).code;
+    if (code === "declined") return "Speichern abgebrochen";
+    if (code === "rate_limited") return "Es ist bereits ein Speichern-Dialog offen";
+    return "Speichern ist in dieser Ansicht nicht möglich – Programm lokal starten";
+  }
+}
+
 export function herunterladen(dateiname: string, inhalt: string | Uint8Array, typ = "application/octet-stream") {
   const url = URL.createObjectURL(new Blob([inhalt as BlobPart], { type: typ }));
   const a = document.createElement("a");
@@ -22,7 +65,7 @@ export function dateiAuswaehlen(accept: string): Promise<File | null> {
 export const dateiname = (name: string) => name.replace(/[^\p{L}\p{N}_ -]+/gu, "").trim().replace(/\s+/g, "_") || "projekt";
 
 export function projektSpeichern(p: Projekt) {
-  herunterladen(`${dateiname(p.name)}.gbi.json`, JSON.stringify(p, null, 1), "application/json");
+  return anbieten(`${dateiname(p.name)}.gbi.json`, JSON.stringify(p, null, 1), "application/json");
 }
 
 /** Geländepunkte aus CSV/TXT: je Zeile mindestens „E N H“ (letzte drei Zahlen, Trenner ; , Tab oder Leerzeichen). */

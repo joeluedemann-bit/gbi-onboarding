@@ -205,3 +205,6 @@ select.klein { padding: 2px 4px; font-size: 12px; border: 1px solid var(--rand);
 .menue-liste small { color: var(--text-leise); font-size: 11px; }
 hr { border: none; border-top: 1px solid var(--rand); margin: 6px 0; width: 100%; }
 .hoehenplan-bereich .plan-titel { padding-right: 190px; }
+body { background: var(--hintergrund); color: var(--text); }
+.vorschau-marke { margin-left: 8px; font-size: 11px; padding: 1px 6px; border-radius: 3px; background: #3d8ee0; color: #fff; vertical-align: middle; letter-spacing: 0.04em; }
+.menue-hinweis { margin: 4px 8px 6px; font-size: 12px; color: var(--warnung); }

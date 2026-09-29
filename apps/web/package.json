@@ -8,7 +8,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "typecheck": "tsc -p tsconfig.json"
+    "typecheck": "tsc -p tsconfig.json",
+    "build:vorschau": "VITE_VORSCHAU=1 vite build --outDir dist-vorschau"
   },
   "dependencies": {
     "@gbi/kern": "0.1.0",

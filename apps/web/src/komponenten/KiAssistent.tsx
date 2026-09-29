@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { Projekt } from "@gbi/kern";
+import { VORSCHAU } from "../vorschau";
 
 export interface KiNachricht {
   rolle: "user" | "assistant" | "fehler";
@@ -29,6 +30,10 @@ export function KiAssistent({ projekt, aendern, nachrichten, setNachrichten }: P
   const ende = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    if (VORSCHAU) {
+      setKonfiguriert(false);
+      return;
+    }
     fetch("/api/status")
       .then((r) => r.json())
       .then((s) => setKonfiguriert(Boolean(s.kiKonfiguriert)))
@@ -67,8 +72,9 @@ export function KiAssistent({ projekt, aendern, nachrichten, setNachrichten }: P
     <div className="ki">
       {konfiguriert === false && (
         <p className="hinweis warnung">
-          Der KI-Dienst ist auf dem Server nicht eingerichtet. Dazu vor dem Start die Umgebungsvariable ANTHROPIC_API_KEY setzen
-          (siehe README).
+          {VORSCHAU
+            ? "Der KI-Assistent läuft über den GBI-Server und ist in dieser Vorschau nicht verfügbar. Lokal starten mit npm run dev und ANTHROPIC_API_KEY."
+            : "Der KI-Dienst ist auf dem Server nicht eingerichtet. Dazu vor dem Start die Umgebungsvariable ANTHROPIC_API_KEY setzen (siehe README)."}
         </p>
       )}
       <div className="ki-verlauf">
@@ -79,7 +85,7 @@ export function KiAssistent({ projekt, aendern, nachrichten, setNachrichten }: P
               Regelwerksprüfung. Jede Änderung lässt sich mit „Rückgängig“ zurücknehmen.
             </p>
             {VORSCHLAEGE.map((v) => (
-              <button key={v} className="vorschlag" onClick={() => senden(v)} disabled={laeuft}>
+              <button key={v} className="vorschlag" onClick={() => senden(v)} disabled={laeuft || VORSCHAU}>
                 {v}
               </button>
             ))}
@@ -124,7 +130,7 @@ export function KiAssistent({ projekt, aendern, nachrichten, setNachrichten }: P
           }}
           rows={3}
         />
-        <button type="submit" disabled={laeuft || !eingabe.trim()}>
+        <button type="submit" disabled={laeuft || !eingabe.trim() || VORSCHAU}>
           Senden
         </button>
       </form>
