@@ -1,0 +1,18 @@
+{
+  "name": "gbi-strassenplanung",
+  "private": true,
+  "version": "0.1.0",
+  "description": "GBI Straßenplanung – Trassierung, Gradiente, Regelwerksprüfung und KI-gestützte Entwurfsautomatisierung",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace @gbi/server & npm run dev --workspace @gbi/web",
+    "dev:web": "npm run dev --workspace @gbi/web",
+    "dev:server": "npm run dev --workspace @gbi/server",
+    "build": "npm run build --workspace @gbi/web",
+    "test": "npm test --workspace @gbi/kern",
+    "typecheck": "npm run typecheck --workspaces --if-present"
+  }
+}
