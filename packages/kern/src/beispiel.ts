@@ -4,6 +4,7 @@
 
 import type { Gelaendepunkt } from "./dgm";
 import { type Projekt, leeresProjekt } from "./projekt";
+import { standardQuerschnitt } from "./querschnitt";
 
 /** Ursprung im Bereich UTM Zone 32 (nur als realistische Größenordnung) */
 export const BEISPIEL_URSPRUNG = { E: 412000, N: 5712000 };
@@ -38,5 +39,6 @@ export function beispielProjekt(): Projekt {
     ],
   };
   p.gelaende = beispielGelaende();
+  p.querschnitt = standardQuerschnitt();
   return p;
 }

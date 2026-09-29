@@ -69,6 +69,7 @@ export function importiereVestraAchsliste(text: string): VestraAchsliste {
     E: number;
     N: number;
     laenge: number;
+    dPhiGon: number;
   }
   const roh: Roh[] = [];
   let ende: VestraHauptpunkt | null = null;
@@ -82,8 +83,8 @@ export function importiereVestraAchsliste(text: string): VestraAchsliste {
         warnungen.push(`Zeile ${i + 2}: Fortsetzungszeile zu „${m[1]}“ fehlt`);
         continue;
       }
-      const laenge = zahlen(z2[1])[0];
-      roh.push({ typ: m[1], station, R, A, phiGon, E, N, laenge });
+      const [laenge, , , dPhiGon] = zahlen(z2[1]);
+      roh.push({ typ: m[1], station, R, A, phiGon, E, N, laenge, dPhiGon });
       i += 1;
       if (zeilen[i + 1]?.match(VIER)) i += 1;
       continue;
@@ -104,7 +105,13 @@ export function importiereVestraAchsliste(text: string): VestraAchsliste {
 
   const elemente: Element[] = roh.map((r, i) => {
     if (/^Gerade$/i.test(r.typ)) return { typ: "gerade", laenge: r.laenge, kAnfang: 0, kEnde: 0 };
-    if (/^(Radius|Kreis|Bogen)/i.test(r.typ)) return { typ: "kreisbogen", laenge: r.laenge, kAnfang: 1 / r.R, kEnde: 1 / r.R };
+    if (/^(Radius|Kreis|Bogen)/i.test(r.typ)) {
+      // Die Länge steht nur auf mm gerundet in der Liste. Bei kleinen Radien ist die
+      // Länge aus der Richtungsänderung (0,1 mgon) genauer: L = |R| · |ΔΦ|.
+      const ausWinkel = Math.abs(r.R * gonZuRad(r.dPhiGon));
+      const genauer = Math.abs(r.R) * gonZuRad(0.00005) < 0.0005 && Math.abs(ausWinkel - r.laenge) < 0.002;
+      return { typ: "kreisbogen", laenge: genauer ? ausWinkel : r.laenge, kAnfang: 1 / r.R, kEnde: 1 / r.R };
+    }
     if (/^Klothoide/i.test(r.typ)) {
       // Krümmungsverlauf aus den Nachbarelementen; A dient der Kontrolle
       const kA = i > 0 ? kruemmung(roh[i - 1]) : 0;
@@ -143,8 +150,13 @@ export function importiereVestraAchsliste(text: string): VestraAchsliste {
 
 /** Vergleicht eine nachgerechnete Achse mit den Hauptpunkten aus VESTRA. */
 export function vergleicheMitHauptpunkten(achse: Achse, hauptpunkte: VestraHauptpunkt[]): Achsvergleich {
-  const punkte = hauptpunkte.map((h) => {
-    const p = achse.pose(h.station);
+  // Hauptpunkte gehören zu den Elementgrenzen; dort vergleichen, nicht an der
+  // gerundeten Listenstation (bei kleinen Radien verfälscht das die Richtung).
+  const grenzen = [...achse.elementStationen(), achse.stationEnde];
+  const zuordnen = grenzen.length === hauptpunkte.length;
+  const punkte = hauptpunkte.map((h, i) => {
+    const st = zuordnen ? grenzen[i] : h.station;
+    const p = i < grenzen.length - 1 || !zuordnen ? achse.pose(st) : achse.pose(achse.stationEnde);
     let dt = (p.t / Math.PI) * 200 - h.richtungGon;
     dt = ((dt % 400) + 600) % 400 - 200;
     return { station: h.station, typ: h.typ, dLage: strecke(p.E - h.E, p.N - h.N), dRichtungGon: dt };

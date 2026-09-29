@@ -1,4 +1,6 @@
 import { useMemo, useState } from "react";
+import { QuerschnittPanel } from "./QuerschnittPanel";
+import { Zahl } from "./Zahl";
 import {
   ENTWURFSKLASSEN,
   type EntwurfsklasseId,
@@ -17,7 +19,7 @@ import {
 } from "@gbi/kern";
 import { KiAssistent, type KiNachricht } from "./KiAssistent";
 
-type Reiter = "lage" | "hoehe" | "elemente" | "pruefung" | "ki";
+type Reiter = "lage" | "hoehe" | "rq" | "elemente" | "pruefung" | "ki";
 
 interface Props {
   projekt: Projekt;
@@ -26,6 +28,7 @@ interface Props {
   auswahlPunkt: number | null;
   auswahlNwp: number | null;
   meldung: (text: string) => void;
+  station: number;
   kiNachrichten: KiNachricht[];
   setKiNachrichten: React.Dispatch<React.SetStateAction<KiNachricht[]>>;
 }
@@ -41,6 +44,7 @@ export function Seitenleiste(props: Props) {
           [
             ["lage", "Lage"],
             ["hoehe", "Höhe"],
+            ["rq", "RQ"],
             ["elemente", "Elemente"],
             ["pruefung", "Prüfung"],
             ["ki", "KI"],
@@ -57,6 +61,7 @@ export function Seitenleiste(props: Props) {
       <div className="reiter-inhalt">
         {reiter === "lage" && <LagePanel {...props} />}
         {reiter === "hoehe" && <HoehePanel {...props} />}
+        {reiter === "rq" && <QuerschnittPanel projekt={props.projekt} ergebnis={props.ergebnis} aendern={props.aendern} station={props.station} />}
         {reiter === "elemente" && <ElementePanel {...props} />}
         {reiter === "pruefung" && <PruefungPanel {...props} />}
         {reiter === "ki" && (
@@ -69,30 +74,6 @@ export function Seitenleiste(props: Props) {
         )}
       </div>
     </aside>
-  );
-}
-
-function Zahl({ wert, onChange, stellen = 2, min }: { wert: number | undefined; onChange: (v: number | undefined) => void; stellen?: number; min?: number }) {
-  const [text, setText] = useState<string | null>(null);
-  const anzeige = text ?? (wert === undefined || Number.isNaN(wert) ? "" : String(Math.round(wert * 10 ** stellen) / 10 ** stellen));
-  return (
-    <input
-      className="zahl"
-      value={anzeige}
-      inputMode="decimal"
-      onChange={(e) => setText(e.target.value)}
-      onBlur={() => {
-        if (text === null) return;
-        const t = text.replace(",", ".").trim();
-        const v = t === "" ? undefined : Number(t);
-        if (v === undefined || (Number.isFinite(v) && (min === undefined || v >= min))) onChange(v);
-        setText(null);
-      }}
-      onKeyDown={(e) => {
-        if (e.key === "Enter") (e.target as HTMLInputElement).blur();
-        if (e.key === "Escape") setText(null);
-      }}
-    />
   );
 }
 

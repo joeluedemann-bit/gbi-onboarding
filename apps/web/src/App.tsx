@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { beispielProjekt, leeresProjekt } from "@gbi/kern";
-import { dateiAuswaehlen, dateiImportieren, landXmlSpeichern, projektSpeichern } from "./dateien";
+import { dateiAuswaehlen, dateiImportieren, projektSpeichern } from "./dateien";
+import { ExportMenue } from "./komponenten/ExportMenue";
+import { Querprofilansicht } from "./komponenten/Querprofil";
 import { Hoehenplan } from "./komponenten/Hoehenplan";
 import type { KiNachricht } from "./komponenten/KiAssistent";
 import { Lageplan } from "./komponenten/Lageplan";
@@ -16,6 +18,12 @@ export function App() {
   const [meldungText, setMeldungText] = useState<string | null>(null);
   const [kiNachrichten, setKiNachrichten] = useState<KiNachricht[]>([]);
   const [planSchluessel, setPlanSchluessel] = useState(0);
+  const [qpStation, setQpStation] = useState(0);
+  const [unten, setUnten] = useState<"hoehenplan" | "querprofil">("hoehenplan");
+  const zeigeQuerprofil = (s: number) => {
+    setQpStation(s);
+    setUnten("querprofil");
+  };
 
   const meldung = useCallback((text: string) => setMeldungText(text), []);
   useEffect(() => {
@@ -51,7 +59,7 @@ export function App() {
   };
 
   const oeffnen = async () => {
-    const datei = await dateiAuswaehlen(".json,.xml,.landxml,.csv,.txt");
+    const datei = await dateiAuswaehlen(".json,.xml,.landxml,.csv,.txt,.lst");
     if (!datei) return;
     try {
       const r = await dateiImportieren(datei, projekt);
@@ -86,22 +94,11 @@ export function App() {
               Neu
             </button>
             <button onClick={() => neuLaden(beispielProjekt(), "Beispielprojekt geladen")}>Beispiel</button>
-            <button onClick={oeffnen} title="GBI-Projekt (.json), LandXML (.xml) oder Geländepunkte (.csv/.txt)">
+            <button onClick={oeffnen} title="GBI-Projekt (.json), LandXML (.xml), VESTRA-Achsliste (AXEL….LST) oder Geländepunkte (.csv/.txt)">
               Öffnen / Import
             </button>
             <button onClick={() => projektSpeichern(projekt)}>Speichern</button>
-            <button
-              disabled={!ergebnis.achse}
-              onClick={() => {
-                try {
-                  landXmlSpeichern(projekt, ergebnis);
-                } catch (e) {
-                  meldung((e as Error).message);
-                }
-              }}
-            >
-              LandXML
-            </button>
+<ExportMenue projekt={projekt} ergebnis={ergebnis} meldung={meldung} />
           </div>
           <div className="gruppe">
             <button onClick={rueckgaengig} disabled={!zustand.kannRueckgaengig} title="Rückgängig (Strg+Z)">
@@ -139,18 +136,30 @@ export function App() {
               onAuswahl={setAuswahlPunkt}
               aendern={aendern}
               abschliessen={abschliessen}
+              station={qpStation}
+              onStation={zeigeQuerprofil}
             />
           </div>
           <div className="hoehenplan-bereich">
-            <Hoehenplan
-              projekt={projekt}
-              ergebnis={ergebnis}
-              modus={modus}
-              auswahl={auswahlNwp}
-              onAuswahl={setAuswahlNwp}
-              aendern={aendern}
-              abschliessen={abschliessen}
-            />
+            <div className="unten-umschalter">
+              <button className={unten === "hoehenplan" ? "aktiv" : ""} onClick={() => setUnten("hoehenplan")}>Höhenplan</button>
+              <button className={unten === "querprofil" ? "aktiv" : ""} onClick={() => setUnten("querprofil")}>Querprofil</button>
+            </div>
+            {unten === "hoehenplan" ? (
+              <Hoehenplan
+                projekt={projekt}
+                ergebnis={ergebnis}
+                modus={modus}
+                auswahl={auswahlNwp}
+                onAuswahl={setAuswahlNwp}
+                aendern={aendern}
+                abschliessen={abschliessen}
+                onStation={zeigeQuerprofil}
+                station={qpStation}
+              />
+            ) : (
+              <Querprofilansicht projekt={projekt} ergebnis={ergebnis} station={qpStation} onStation={setQpStation} />
+            )}
           </div>
         </section>
         <Seitenleiste
@@ -160,6 +169,7 @@ export function App() {
           auswahlPunkt={auswahlPunkt}
           auswahlNwp={auswahlNwp}
           meldung={meldung}
+          station={qpStation}
           kiNachrichten={kiNachrichten}
           setKiNachrichten={setKiNachrichten}
         />

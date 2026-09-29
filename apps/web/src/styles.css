@@ -181,3 +181,27 @@ input, select, textarea { font: inherit; color: inherit; }
   .plaene { min-height: 700px; }
   .seitenleiste { width: auto; border-left: none; border-top: 1px solid var(--rand); min-height: 500px; }
 }
+
+/* Querschnitt, Querprofil, Export */
+.unten-umschalter { position: absolute; right: 18px; margin-top: 4px; z-index: 2; display: flex; gap: 2px; }
+.hoehenplan-bereich { position: relative; }
+.unten-umschalter button { padding: 2px 8px; font-size: 12px; }
+.achse-qp { stroke: #dc2626; stroke-dasharray: 6 3 1 3; stroke-width: 1; }
+.qp-text { font-size: 10px; fill: #334155; font-variant-numeric: tabular-nums; }
+.qp-marke { stroke: #7c3aed; stroke-width: 1.5; stroke-dasharray: 4 3; pointer-events: none; }
+.rq-skizze { width: 100%; height: auto; background: #fbfcfd; border: 1px solid var(--rand); border-radius: 4px; }
+.zahl.text { min-width: 90px; }
+.leer { padding: 16px; }
+select.klein { padding: 2px 4px; font-size: 12px; border: 1px solid var(--rand); border-radius: 4px; background: #fff; }
+.plan-titel select.klein { font-weight: normal; }
+.menue { position: relative; }
+.menue-liste {
+  position: absolute; right: 0; top: calc(100% + 4px); z-index: 20; width: 340px;
+  background: #fff; border: 1px solid var(--rand); border-radius: 6px; box-shadow: 0 8px 24px rgba(0,0,0,.18);
+  display: flex; flex-direction: column; padding: 4px;
+}
+.kopf .menue-liste button { background: #fff; color: var(--text); border: none; text-align: left; display: flex; flex-direction: column; gap: 1px; padding: 7px 9px; }
+.kopf .menue-liste button:hover:not(:disabled) { background: var(--akzent-hell); }
+.menue-liste small { color: var(--text-leise); font-size: 11px; }
+hr { border: none; border-top: 1px solid var(--rand); margin: 6px 0; width: 100%; }
+.hoehenplan-bereich .plan-titel { padding-right: 190px; }

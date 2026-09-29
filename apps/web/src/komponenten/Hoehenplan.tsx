@@ -19,6 +19,8 @@ interface Props {
   onAuswahl: (i: number | null) => void;
   aendern: (f: (p: Projekt) => Projekt, o?: { zusammenfassen?: boolean }) => void;
   abschliessen: () => void;
+  station: number;
+  onStation: (s: number) => void;
 }
 
 const RAND = { links: 58, rechts: 16, oben: 14, unten: 78 };
@@ -31,7 +33,7 @@ function schoeneSchrittweite(spanne: number, ziel: number) {
   return 10 * p;
 }
 
-export function Hoehenplan({ projekt, ergebnis, modus, auswahl, onAuswahl, aendern, abschliessen }: Props) {
+export function Hoehenplan({ projekt, ergebnis, modus, auswahl, onAuswahl, aendern, abschliessen, station: qpStation, onStation }: Props) {
   const [box, groesse] = useGroesse<HTMLDivElement>();
   const svgRef = useRef<SVGSVGElement>(null);
   const ziehen = useRef<number | null>(null);
@@ -112,6 +114,12 @@ export function Hoehenplan({ projekt, ergebnis, modus, auswahl, onAuswahl, aende
     onAuswahl(null);
   };
 
+  const onDoubleClick = (ev: React.MouseEvent<SVGSVGElement>) => {
+    const r = svgRef.current!.getBoundingClientRect();
+    const st = station(ev.clientX - r.left);
+    if (achse && st >= achse.stationAnfang && st <= achse.stationEnde) onStation(Math.round(st * 1000) / 1000);
+  };
+
   const onPointerMove = (ev: React.PointerEvent<SVGSVGElement>) => {
     const { px, py } = lokal(ev);
     setMaus({ station: station(px), hoehe: hoeheBei(py) });
@@ -180,6 +188,7 @@ export function Hoehenplan({ projekt, ergebnis, modus, auswahl, onAuswahl, aende
             onPointerMove={onPointerMove}
             onPointerUp={onPointerUp}
             onPointerLeave={() => setMaus(null)}
+            onDoubleClick={onDoubleClick}
           >
             <rect x={RAND.links} y={RAND.oben} width={breite} height={hoehe} className="hp-flaeche" />
             {hLinien.map((h) => (
@@ -252,6 +261,9 @@ export function Hoehenplan({ projekt, ergebnis, modus, auswahl, onAuswahl, aende
             {bandPfad && <path d={bandPfad} className="kruemmungsband" />}
             <text x={RAND.links + 4} y={bandY0 - BAND / 2 - 4} className="achsbeschriftung">Krümmungsbild</text>
 
+            {projekt.querschnitt && qpStation >= bereich.s0 && qpStation <= bereich.s1 && (
+              <line x1={x(qpStation)} x2={x(qpStation)} y1={RAND.oben} y2={RAND.oben + hoehe} className="qp-marke" />
+            )}
             {maus && maus.station >= bereich.s0 && maus.station <= bereich.s1 && (
               <line x1={x(maus.station)} x2={x(maus.station)} y1={RAND.oben} y2={RAND.oben + hoehe} className="fadenkreuz" />
             )}
@@ -279,7 +291,7 @@ export function Hoehenplan({ projekt, ergebnis, modus, auswahl, onAuswahl, aende
         ) : modus === "nwp" ? (
           "Klick: Neigungswechselpunkt einfügen · Ziehen: NWP verschieben"
         ) : (
-          "NWP anklicken und ziehen, um die Gradiente zu ändern"
+          "NWP anklicken und ziehen, um die Gradiente zu ändern · Doppelklick: Querprofil an dieser Station"
         )}
       </div>
     </div>

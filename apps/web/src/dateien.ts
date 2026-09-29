@@ -1,7 +1,7 @@
-import { type Gelaendepunkt, type Projekt, type Projektergebnis, exportiereLandXml, importiereLandXml } from "@gbi/kern";
+import { type Gelaendepunkt, type Projekt, importiereLandXml, importiereVestraAchsliste } from "@gbi/kern";
 
-export function herunterladen(dateiname: string, inhalt: string, typ = "application/octet-stream") {
-  const url = URL.createObjectURL(new Blob([inhalt], { type: typ }));
+export function herunterladen(dateiname: string, inhalt: string | Uint8Array, typ = "application/octet-stream") {
+  const url = URL.createObjectURL(new Blob([inhalt as BlobPart], { type: typ }));
   const a = document.createElement("a");
   a.href = url;
   a.download = dateiname;
@@ -19,16 +19,10 @@ export function dateiAuswaehlen(accept: string): Promise<File | null> {
   });
 }
 
-const dateiname = (name: string) => name.replace(/[^\p{L}\p{N}_ -]+/gu, "").trim().replace(/\s+/g, "_") || "projekt";
+export const dateiname = (name: string) => name.replace(/[^\p{L}\p{N}_ -]+/gu, "").trim().replace(/\s+/g, "_") || "projekt";
 
 export function projektSpeichern(p: Projekt) {
   herunterladen(`${dateiname(p.name)}.gbi.json`, JSON.stringify(p, null, 1), "application/json");
-}
-
-export function landXmlSpeichern(p: Projekt, e: Projektergebnis) {
-  if (!e.achse) throw new Error("Es ist keine Achse vorhanden");
-  const xml = exportiereLandXml({ projektname: p.name, achse: e.achse, gradiente: e.gradiente, dgm: e.dgm });
-  herunterladen(`${dateiname(p.name)}.xml`, xml, "application/xml");
 }
 
 /** Geländepunkte aus CSV/TXT: je Zeile mindestens „E N H“ (letzte drei Zahlen, Trenner ; , Tab oder Leerzeichen). */
@@ -56,10 +50,18 @@ export interface Importergebnis {
   meldungen: string[];
 }
 
-/** Öffnet GBI-Projekt (.json), LandXML (.xml) oder Geländepunkte (.csv/.txt). */
+/** Öffnet GBI-Projekt (.json), LandXML (.xml), VESTRA-Achsliste (.lst) oder Geländepunkte (.csv/.txt). */
 export async function dateiImportieren(datei: File, aktuell: Projekt): Promise<Importergebnis> {
-  const text = await datei.text();
   const name = datei.name.toLowerCase();
+  // VESTRA-Listen sind meist Windows-1252 kodiert
+  const text = name.endsWith(".lst") ? await leseText(datei) : await datei.text();
+  if (name.endsWith(".lst")) {
+    const l = importiereVestraAchsliste(text);
+    return {
+      projekt: { ...aktuell, name: aktuell.name, stationAnfang: l.definition.stationAnfang, achse: { modus: "elemente", definition: l.definition } },
+      meldungen: [`VESTRA-Achse „${l.name}“ mit ${l.definition.elemente.length} Elementen importiert`, ...l.warnungen],
+    };
+  }
   if (name.endsWith(".json")) {
     const p = JSON.parse(text) as Projekt;
     if (p.format !== "gbi-strassenplanung") throw new Error("Keine GBI-Projektdatei");
@@ -91,4 +93,13 @@ export async function dateiImportieren(datei: File, aktuell: Projekt): Promise<I
   const gelaende = leseGelaendeText(text);
   if (gelaende.length < 3) throw new Error("Keine Geländepunkte erkannt (erwartet: je Zeile E N H)");
   return { projekt: { ...aktuell, gelaende }, meldungen: [`${gelaende.length} Geländepunkte importiert`] };
+}
+
+async function leseText(datei: File): Promise<string> {
+  const bytes = new Uint8Array(await datei.arrayBuffer());
+  try {
+    return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+  } catch {
+    return new TextDecoder("windows-1252").decode(bytes);
+  }
 }

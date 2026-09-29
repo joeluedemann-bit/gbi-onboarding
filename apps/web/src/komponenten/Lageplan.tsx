@@ -7,6 +7,7 @@ import {
   type Projektergebnis,
   formatStation,
   formatZahl,
+  randlinien,
 } from "@gbi/kern";
 import type { Modus } from "../zustand";
 import { useGroesse } from "./useGroesse";
@@ -19,6 +20,8 @@ interface Props {
   onAuswahl: (i: number | null) => void;
   aendern: (f: (p: Projekt) => Projekt, o?: { zusammenfassen?: boolean }) => void;
   abschliessen: () => void;
+  station: number;
+  onStation: (s: number) => void;
 }
 
 interface Sicht {
@@ -30,7 +33,9 @@ interface Sicht {
 
 const FARBE = { gerade: "#1e293b", kreisbogen: "#2563eb", klothoide: "#ea580c" } as const;
 
-export function Lageplan({ projekt, ergebnis, modus, auswahl, onAuswahl, aendern, abschliessen }: Props) {
+const RAND_FARBE: Record<string, string> = { fahrbahn: "#334155", rinne: "#64748b", bordstein: "#b45309", gehweg: "#6b7280", radweg: "#be123c", parken: "#475569", bankett: "#15803d", gruen: "#15803d", mulde: "#2563eb" };
+
+export function Lageplan({ projekt, ergebnis, modus, auswahl, onAuswahl, aendern, abschliessen, station, onStation }: Props) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [box, groesse] = useGroesse<HTMLDivElement>();
   const [sicht, setSicht] = useState<Sicht | null>(null);
@@ -208,6 +213,34 @@ export function Lageplan({ projekt, ergebnis, modus, auswahl, onAuswahl, aendern
 
   const px = (n: number) => n * massstab;
 
+  const raender = useMemo(() => {
+    if (!achse || !projekt.querschnitt) return [];
+    try {
+      return randlinien(achse, projekt.querschnitt, 2).map((l) => ({
+        art: l.art,
+        d: "M" + l.punkte.map((p) => `${p.E.toFixed(3)},${(-p.N).toFixed(3)}`).join("L"),
+      }));
+    } catch {
+      return [];
+    }
+  }, [achse, projekt.querschnitt]);
+
+  const qpMarke = useMemo(() => {
+    if (!achse || !projekt.querschnitt) return null;
+    const summe = (spuren: { breite: number }[]) => spuren.reduce((a, x) => a + x.breite, 0);
+    const breite = Math.max(summe(projekt.querschnitt.links), summe(projekt.querschnitt.rechts), 4) + 4;
+    const a = achse.punkt(station, -breite);
+    const b = achse.punkt(station, breite);
+    return { a, b };
+  }, [achse, projekt.querschnitt, station]);
+
+  const onDoubleClick = (ev: React.MouseEvent<SVGSVGElement>) => {
+    if (!achse) return;
+    const w = weltPunkt(ev.clientX, ev.clientY);
+    const s = achse.stationieren(w.E, w.N);
+    if (s.innerhalb && Math.abs(s.versatz) < 30) onStation(Math.round(s.station * 1000) / 1000);
+  };
+
   return (
     <div className="plan">
       <div className="plan-titel">
@@ -232,6 +265,7 @@ export function Lageplan({ projekt, ergebnis, modus, auswahl, onAuswahl, aendern
           onPointerLeave={() => setMaus(null)}
           onWheel={onWheel}
           onContextMenu={onContextMenu}
+          onDoubleClick={onDoubleClick}
         >
           {ergebnis.dgm && <Gelaende dgm={ergebnis.dgm} />}
 
@@ -241,6 +275,13 @@ export function Lageplan({ projekt, ergebnis, modus, auswahl, onAuswahl, aendern
               points={polygon.map((p) => `${p.E},${-p.N}`).join(" ")}
               vectorEffect="non-scaling-stroke"
             />
+          )}
+
+          {raender.map((r, i) => (
+            <path key={`r${i}`} d={r.d} fill="none" stroke={RAND_FARBE[r.art] ?? "#334155"} strokeWidth={r.art === "bordstein" ? 2 : 1} vectorEffect="non-scaling-stroke" />
+          ))}
+          {qpMarke && (
+            <line x1={qpMarke.a.E} y1={-qpMarke.a.N} x2={qpMarke.b.E} y2={-qpMarke.b.N} className="qp-marke" vectorEffect="non-scaling-stroke" />
           )}
 
           {elementLinien.map((l, i) => (
@@ -300,7 +341,7 @@ export function Lageplan({ projekt, ergebnis, modus, auswahl, onAuswahl, aendern
         ) : modus === "polygon" ? (
           "Klick: Polygonpunkt anfügen · Ziehen: Punkt verschieben · Rechtsklick: Punkt löschen"
         ) : (
-          "Ziehen: verschieben · Mausrad: zoomen · Punkt anklicken: bearbeiten"
+          "Ziehen: verschieben · Mausrad: zoomen · Punkt anklicken: bearbeiten · Doppelklick an der Achse: Querprofil"
         )}
         {projekt.achse.modus === "elemente" && <span className="hinweis"> · Achse aus Import (Elementfolge, nicht per Polygon bearbeitbar)</span>}
       </div>

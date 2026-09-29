@@ -11,6 +11,23 @@ Ziel ist ein schrittweiser Ersatz von VESTRA INFRAVISION für die Standardaufgab
 - KI-Assistent mit Werkzeugzugriff auf den Rechenkern
 - LandXML-Austausch, Web-Oberfläche mit Lage- und Höhenplan
 
+## Phase 1b – Straßenraum und Pläne ✅ (Version 0.2)
+
+- Regelquerschnitt, Deckenbuch mit Aufweitungen, Verwindungen und Bordabsenkungen
+- Querprofile mit Böschung, Deckenhöhen, Deckenbuch als CSV
+- DXF-Pläne: Lageplan, Deckenhöhenplan, Höhenplan, Querprofile, RQ
+- KI-Werkzeuge für Querschnitt, Querneigung, Spuränderungen, Querprofil- und Deckenbuchabfrage
+- VESTRA-Achslisten-Import, Abgleich an Planstraße A (< 1 mm)
+
+## Nächste Schritte (Stufe 2)
+
+- [ ] Planlayouts mit Blattrahmen und Schriftfeld nach GBI-Vorlage (aus den Referenzplänen RQ/HP/QP/Deckenhöhenplan)
+- [ ] Layer- und Farbschema nach „VESTRA Farben gemäß C01-Format“
+- [ ] Freistellen über WIPEOUT (DXF 2000+) statt Freistellflächen
+- [ ] Bordsteine als Einzelobjekte (Typ, Anschlag, Absenkungen, Radien an Einmündungen)
+- [ ] Mehrere Achsen je Projekt (Planstraßen A–E) mit Anschlüssen
+- [ ] Oberbau je Spur (Schichten), Mengen nach REB aus den Querprofilen
+
 ## Phase 2 – Fachliche Absicherung und Datenaustausch
 
 - [ ] RAL-Grenzwerte fachlich prüfen, fehlende Kriterien ergänzen (Relationstrassierung/Radienfolge, Mindestlängen Bogen/Gerade, Haltesichtweite)

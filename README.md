@@ -15,9 +15,13 @@ Langfristiges Ziel: VESTRA INFRAVISION für die eigenen Standardaufgaben ablöse
 | **Gelände** | DGM als Delaunay-Dreiecksvermaschung, Höhenlinien, Geländeschnitt entlang der Achse |
 | **Regelwerk** | Prüfung nach RAL-Entwurfsklassen EKL 1–4: Mindestradius, Radienbereich, Klothoidenparameter (R/3 ≤ A ≤ R), Höchstlängsneigung, Kuppen-/Wannenhalbmesser |
 | **Automatik** | Radienwahl passend zu den Tangentenlängen, geländenahe Gradiente (Vereinfachung, Ausgleichung, Neigungsbegrenzung, Ausrundungen) |
+| **Querschnitt** | Regelquerschnitt aus Spuren (Fahrbahn, Rinne, Bordstein, Gehweg, Bankett …) mit Breite, Querneigung und Bordanschlag, Vorlagen |
+| **Deckenbuch** | Randpunkte je Station mit Abstand, Höhe und Koordinaten; Aufweitungen, Verwindungen (Querneigungsverlauf), Bordabsenkungen |
+| **Querprofile** | Querprofil an jeder Station mit Böschung bis zum Gelände, Auftrags-/Abtragsflächen |
 | **Erdmassen** | Überschlägige Massen (Trapezprofil) für Variantenvergleiche |
 | **KI-Assistent** | Claude plant über dieselben Funktionen wie die Oberfläche, prüft selbst gegen das Regelwerk und bessert nach |
-| **Austausch** | LandXML 1.2 Export/Import (Achse, Gradiente, Gelände), Geländepunkte als CSV/TXT, Projektdatei (JSON) |
+| **Pläne (DXF → DWG)** | Lageplan, Deckenhöhenplan, Höhenplan mit Bändern und Krümmungsbild, Querprofile, Regelquerschnitt; Beschriftungen freigestellt, Umlaute in Windows-1252 |
+| **Austausch** | LandXML 1.2 Export/Import, VESTRA-Achsliste (AXEL####.LST) Import, Deckenbuch als CSV, Geländepunkte als CSV/TXT, Projektdatei (JSON) |
 | **Oberfläche** | Lageplan mit Höhenschichten, Höhenplan mit Krümmungsbild, interaktives Bearbeiten, Rückgängig/Wiederholen, Autosicherung |
 
 **Wichtig:** Die hinterlegten RAL-Grenzwerte (`packages/kern/src/regelwerk.ts`) müssen vor dem Einsatz in echten Projekten fachlich gegen die gültige Ausgabe der RAL geprüft werden. Die Verantwortung für den Entwurf liegt bei der planenden Person, auch wenn die KI ihn erstellt hat.
@@ -48,6 +52,16 @@ npm run dev
 
 Standardmodell ist `claude-opus-5-5`, änderbar über `GBI_KI_MODELL`. Lehnt das Modell eine Anfrage ab, übernimmt serverseitig automatisch ein Ersatzmodell (Anthropic „server-side fallback“).
 
+### Pläne als DWG
+
+Die Pläne werden als DXF (AutoCAD R12) erzeugt: Menü **Export**. AutoCAD und BricsCAD öffnen sie direkt, dort „Speichern unter → DWG“. Für viele Dateien auf einmal eignet sich der kostenlose ODA File Converter (DXF → DWG im Stapel). Freistellflächen hinter Beschriftungen liegen auf dem Layer `FREISTELLEN` (Farbe 255, beim Plotten weiß).
+
+### Abgleich mit VESTRA
+
+Am Projekt „Planstraße A“ (Seukendorf) nachgerechnet:
+- Achse aus der VESTRA-Ergebnisliste: Hauptpunkte < 1 mm Lage, ≤ 1 cc Richtung; 135 Absteckpunkte der Achse < 1 mm
+- Gradiente aus dem Höhenplan: 48 Stationen < 1 mm, Tangentenlängen und Stich identisch
+
 ### Weitere Befehle
 
 ```bash
@@ -71,6 +85,10 @@ packages/kern     Rechenkern in TypeScript, ohne Oberfläche. Läuft im Browser,
   automatik.ts      Radienwahl, Gradiente aus Gelände
   massen.ts         Überschlägige Erdmassen
   landxml.ts        LandXML 1.2 Export/Import
+  vestra.ts         Import VESTRA-Achsliste (Textausgabe), Vergleich mit Hauptpunkten
+  querschnitt.ts    Regelquerschnitt, Deckenbuch, Querprofile, Spurränder
+  dxf.ts            DXF-Schreiber (R12, Windows-1252, Freistellen)
+  plaene.ts         Lageplan, Deckenhöhenplan, Höhenplan, Querprofile, RQ als DXF
   projekt.ts        Projektmodell (JSON) und Gesamtberechnung
 apps/server       Express-Server: KI-Assistent (Claude, Werkzeugaufrufe auf den Rechenkern), Auslieferung der Web-App
 apps/web          React-Web-App: Lageplan, Höhenplan, Seitenleiste, KI-Chat

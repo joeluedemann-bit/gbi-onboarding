@@ -16,7 +16,11 @@ import {
   erzeugeDgm,
   gradienteAusGelaende,
   projektZusammenfassung,
+  QUERSCHNITT_VORLAGEN,
+  deckenbuch,
+  querprofil,
   schaetzeErdmassen,
+  standardQuerschnitt,
 } from "@gbi/kern";
 
 export interface Protokolleintrag {
@@ -71,7 +75,30 @@ const polygonPunkt = z.object({
   A2: z.number().min(0).optional().describe("Klothoidenparameter nach dem Bogen, 0 = keine Klothoide"),
 });
 
+const spurSchema = z.object({
+  name: z.string().describe("Bezeichnung, z. B. „Fahrbahn“, „Tiefbord TB 15/20“, „Großpflasterrinne“"),
+  art: z.enum(["fahrbahn", "rinne", "bordstein", "gehweg", "radweg", "parken", "bankett", "gruen", "mulde"]),
+  breite: z.number().min(0).max(30).describe("Breite in m"),
+  neigung: z.number().min(-30).max(30).describe("Querneigung in %, positiv = Gefälle von der Achse nach außen, negativ = Anstieg nach außen"),
+  sprung: z.number().min(-1).max(1).optional().describe("Höhensprung am inneren Spurrand in m, z. B. Bordanschlag 0,03 (Tiefbord) oder 0,10–0,12 (Hochbord)"),
+});
+
+const aenderungSchema = z.object({
+  seite: z.enum(["links", "rechts"]),
+  spur: z.number().int().min(0).describe("Index der Spur auf dieser Seite, 0 = an der Achse"),
+  stationVon: z.number(),
+  stationBis: z.number(),
+  breiteVon: z.number().min(0).optional().describe("Breite am Bereichsanfang (leer = unverändert)"),
+  breiteBis: z.number().min(0).optional().describe("Breite am Bereichsende (linear dazwischen)"),
+  sprung: z.number().optional().describe("Höhensprung im Bereich, z. B. 0,03 für eine Bordabsenkung an einer Einfahrt"),
+  uebergang: z.number().min(0).optional().describe("Übergangslänge des Höhensprungs in m (Standard 1)"),
+});
+
 export function erstelleWerkzeuge(s: Planungssitzung) {
+  const querschnitt = () => {
+    if (!s.projekt.querschnitt) throw new Error("Noch kein Regelquerschnitt – zuerst querschnitt_setzen aufrufen");
+    return s.projekt.querschnitt;
+  };
   const polygon = () => {
     if (s.projekt.achse.modus !== "polygon") {
       throw new Error("Die Achse liegt als importierte Elementfolge vor; zuerst mit tangentenpolygon_setzen ein Polygon festlegen");
@@ -250,6 +277,89 @@ export function erstelleWerkzeuge(s: Planungssitzung) {
         const m = schaetzeErdmassen(r.gradiente, r.gelaendeschnitt, o);
         const rd = (x: number) => Math.round(x);
         return { auftrag_m3: rd(m.auftrag), abtrag_m3: rd(m.abtrag), bilanz_m3: rd(m.bilanz), maxDamm_m: Math.round(m.maxDamm * 100) / 100, maxEinschnitt_m: Math.round(m.maxEinschnitt * 100) / 100 };
+      }),
+    }),
+
+    betaZodTool({
+      name: "querschnitt_setzen",
+      description: `Legt den Regelquerschnitt (RQ) fest: Spuren je Seite von der Achse nach außen, Böschungsneigungen. Ersetzt den bisherigen RQ, Querneigungsverlauf und Änderungen bleiben erhalten. Vorlagen als Ausgangspunkt: ${Object.keys(QUERSCHNITT_VORLAGEN).join("; ")}. Eine Rinne liegt zwischen Fahrbahn und Bord; der Bordanschlag ist der Sprung am inneren Rand der Bordspur.`,
+      inputSchema: z.object({
+        name: z.string(),
+        links: z.array(spurSchema),
+        rechts: z.array(spurSchema),
+        boeschungAuftrag: z.number().min(0.1).max(10).optional().describe("Böschungsneigung 1:n im Damm (Standard 1,5)"),
+        boeschungAbtrag: z.number().min(0.1).max(10).optional().describe("Böschungsneigung 1:n im Einschnitt (Standard 1,5)"),
+      }),
+      run: ausfuehren("querschnitt_setzen", (e: { name: string; links: z.infer<typeof spurSchema>[]; rechts: z.infer<typeof spurSchema>[]; boeschungAuftrag?: number; boeschungAbtrag?: number }) => {
+        const alt = s.projekt.querschnitt ?? standardQuerschnitt();
+        s.projekt.querschnitt = {
+          ...alt,
+          name: e.name,
+          links: e.links,
+          rechts: e.rechts,
+          boeschung: { ...alt.boeschung, auftrag: e.boeschungAuftrag ?? alt.boeschung.auftrag, abtrag: e.boeschungAbtrag ?? alt.boeschung.abtrag },
+          aenderungen: alt.aenderungen.filter((a) => a.spur < (a.seite === "links" ? e.links : e.rechts).length),
+        };
+        return { ok: true, status: s.kurzstatus() };
+      }),
+    }),
+
+    betaZodTool({
+      name: "querneigung_setzen",
+      description: "Legt den Querneigungsverlauf der Fahrbahn fest (Verwindung): Querneigungen links/rechts in % an Stationen, linear dazwischen, außerhalb konstant. Leere Liste = Querneigung aus dem RQ. Beispiel Wechsel von Dachprofil auf einseitig: [{station:100, links:2.5, rechts:2.5},{station:120, links:-2.5, rechts:2.5}].",
+      inputSchema: z.object({ punkte: z.array(z.object({ station: z.number(), links: z.number(), rechts: z.number() })) }),
+      run: ausfuehren("querneigung_setzen", ({ punkte }: { punkte: { station: number; links: number; rechts: number }[] }) => {
+        querschnitt().querneigungen = [...punkte].sort((a, b) => a.station - b.station);
+        return { ok: true, status: s.kurzstatus() };
+      }),
+    }),
+
+    betaZodTool({
+      name: "spuraenderungen_setzen",
+      description: "Legt alle bereichsweisen Spuränderungen fest (ersetzt die bisherigen): Aufweitungen/Verziehungen (Breite linear von–bis) und Bordabsenkungen (Sprung im Bereich, mit Übergängen), z. B. an Einmündungen, Parkplätzen und Grundstückszufahrten.",
+      inputSchema: z.object({ aenderungen: z.array(aenderungSchema) }),
+      run: ausfuehren("spuraenderungen_setzen", ({ aenderungen }: { aenderungen: z.infer<typeof aenderungSchema>[] }) => {
+        const q = querschnitt();
+        for (const a of aenderungen) {
+          if (!(a.seite === "links" ? q.links : q.rechts)[a.spur]) throw new Error(`Spur ${a.spur} auf Seite ${a.seite} existiert nicht`);
+        }
+        q.aenderungen = aenderungen;
+        return { ok: true, anzahl: aenderungen.length, status: s.kurzstatus() };
+      }),
+    }),
+
+    betaZodTool({
+      name: "querprofil_abfragen",
+      description: "Berechnet das Querprofil an einer Station: alle Deckenpunkte (Abstand, Höhe, Bezeichnung), Böschungsfuß/-oberkante, Geländehöhen und Auftrags-/Abtragsflächen. Zum Prüfen von Bordhöhen, Anschlüssen und Böschungen.",
+      inputSchema: z.object({ station: z.number() }),
+      run: ausfuehren("querprofil_abfragen", ({ station }: { station: number }) => {
+        const r = s.berechne();
+        if (!r.achse || !r.gradiente) throw new Error("Achse und Gradiente werden benötigt");
+        const qp = querprofil(r.achse, r.gradiente, querschnitt(), station, r.dgm);
+        const rd = (x: number) => Math.round(x * 1000) / 1000;
+        return {
+          station: rd(station),
+          achshoehe: rd(qp.hoehe),
+          punkte: qp.punkte.map((p) => ({ name: p.name, art: p.art, abstand: rd(p.abstand), hoehe: rd(p.hoehe) })),
+          gelaendeAussenLinks: qp.gelaende[0] ? rd(qp.gelaende[0].hoehe) : null,
+          gelaendeAussenRechts: qp.gelaende.length ? rd(qp.gelaende[qp.gelaende.length - 1].hoehe) : null,
+          auftrag_m2: rd(qp.auftrag),
+          abtrag_m2: rd(qp.abtrag),
+        };
+      }),
+    }),
+
+    betaZodTool({
+      name: "deckenbuch_abfragen",
+      description: "Deckenbuch: je Station Abstand und Höhe aller Randpunkte (Fahrbahnrand, Rinne, Bord oben/unten, Gehweg …). Liefert höchstens 60 Stationen; für Details querprofil_abfragen verwenden.",
+      inputSchema: z.object({ intervall: z.number().min(1).max(100).optional().describe("Stationsabstand in m (Standard 20)") }),
+      run: ausfuehren("deckenbuch_abfragen", ({ intervall }: { intervall?: number }) => {
+        const r = s.berechne();
+        if (!r.achse || !r.gradiente) throw new Error("Achse und Gradiente werden benötigt");
+        const rd = (x: number) => Math.round(x * 1000) / 1000;
+        return deckenbuch(r.achse, r.gradiente, querschnitt(), intervall ?? 20)
+          .slice(0, 60)
+          .map((z) => ({ station: rd(z.station), punkte: z.punkte.map((p) => `${p.name}: ${rd(p.abstand)} / ${rd(p.hoehe)}`) }));
       }),
     }),
 

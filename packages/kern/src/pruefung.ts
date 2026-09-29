@@ -10,7 +10,7 @@ export type PruefEbene = "fehler" | "warnung" | "hinweis" | "ok";
 
 export interface Pruefpunkt {
   ebene: PruefEbene;
-  bereich: "lageplan" | "hoehenplan" | "allgemein";
+  bereich: "lageplan" | "hoehenplan" | "querschnitt" | "allgemein";
   text: string;
   station?: number;
 }

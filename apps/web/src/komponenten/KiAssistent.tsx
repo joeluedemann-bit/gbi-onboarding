@@ -15,6 +15,7 @@ interface Props {
 }
 
 const VORSCHLAEGE = [
+  "Regelquerschnitt: Fahrbahn 5,70 m einseitig 2,5 % nach rechts, beidseitig Großpflasterrinne 16 cm und Tiefbord 15 cm mit 3 cm Anschlag, Bankett 0,50 m. Prüfe drei Querprofile.",
   "Setze passende Radien und Klothoiden nach der Entwurfsklasse und prüfe das Ergebnis.",
   "Entwirf eine Gradiente mit möglichst ausgeglichener Erdmassenbilanz.",
   "Prüfe den Entwurf und behebe alle Regelwerksverstöße.",

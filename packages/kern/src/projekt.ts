@@ -9,6 +9,7 @@ import { klothoidenParameter } from "./elemente";
 import { Gradiente, type Neigungswechsel } from "./gradiente";
 import { type Pruefpunkt, pruefeEntwurf } from "./pruefung";
 import { ENTWURFSKLASSEN, type EntwurfsklasseId } from "./regelwerk";
+import { type Querschnitt, pruefeQuerschnitt } from "./querschnitt";
 import { type BogenInfo, type Meldung, type PolygonPunkt, type TrassierungsErgebnis, trassiereTangentenpolygon } from "./trassierung";
 
 export type AchsEingabe =
@@ -24,6 +25,8 @@ export interface Projekt {
   achse: AchsEingabe;
   gradiente: Neigungswechsel[];
   gelaende: Gelaendepunkt[];
+  /** Regelquerschnitt und Deckenbuch-Änderungen (optional) */
+  querschnitt?: Querschnitt;
 }
 
 export interface Projektergebnis {
@@ -116,6 +119,11 @@ export function berechneProjekt(p: Projekt, cache: BerechnungsCache = {}): Proje
     stationEnde: achse?.stationEnde,
     meldungen,
   });
+  if (p.querschnitt) {
+    for (const m of pruefeQuerschnitt(p.querschnitt, gradiente)) {
+      pruefung.push({ ebene: m.ebene, bereich: "querschnitt", text: m.text, station: m.station });
+    }
+  }
   for (const f of fehler) pruefung.unshift({ ebene: "fehler", bereich: "allgemein", text: f });
 
   return { achse, trassierung, boegen, gradiente, dgm, gelaendeschnitt: schnitt, pruefung, fehler };
@@ -193,6 +201,7 @@ export function projektZusammenfassung(p: Projekt, e: Projektergebnis) {
     gelaende: e.dgm
       ? { punkte: e.dgm.punkte.length, hoeheMin: r(e.dgm.grenzen.minH, 2), hoeheMax: r(e.dgm.grenzen.maxH, 2), grenzen: { minE: r(e.dgm.grenzen.minE, 1), maxE: r(e.dgm.grenzen.maxE, 1), minN: r(e.dgm.grenzen.minN, 1), maxN: r(e.dgm.grenzen.maxN, 1) } }
       : null,
+    querschnitt: p.querschnitt ?? null,
     pruefung: e.pruefung.filter((q) => q.ebene !== "ok").map((q) => ({ ebene: q.ebene, bereich: q.bereich, text: q.text, station: q.station !== undefined ? r(q.station, 1) : undefined })),
   };
 }
