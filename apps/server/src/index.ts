@@ -6,13 +6,15 @@ import { fileURLToPath } from "node:url";
 import type { Projekt } from "@gbi/kern";
 import { type Chatnachricht, planeMitKi } from "./ki/assistent";
 
+const kiKonfiguriert = () => Boolean(process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN);
+
 const app = express();
 app.use(express.json({ limit: "50mb" }));
 
 app.get("/api/status", (_req, res) => {
   res.json({
     version: "0.1.0",
-    kiKonfiguriert: Boolean(process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN),
+    kiKonfiguriert: kiKonfiguriert(),
   });
 });
 
@@ -31,6 +33,9 @@ app.post("/api/ki/planen", async (req, res) => {
       res.status(429).json({ fehler: "Der KI-Dienst ist ausgelastet – bitte gleich noch einmal versuchen." });
     } else if (e instanceof Anthropic.APIError) {
       res.status(502).json({ fehler: `KI-Dienst: ${e.message}` });
+    } else if (!kiKonfiguriert()) {
+      // Ohne Zugangsdaten scheitert der Client schon vor der Anfrage
+      res.status(401).json({ fehler: "Der KI-Dienst ist nicht angemeldet: ANTHROPIC_API_KEY auf dem Server setzen." });
     } else {
       console.error(e);
       res.status(500).json({ fehler: (e as Error).message });

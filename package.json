@@ -8,11 +8,16 @@
     "apps/*"
   ],
   "scripts": {
-    "dev": "npm run dev --workspace @gbi/server & npm run dev --workspace @gbi/web",
+    "dev": "concurrently -n server,web -c blue,green \"npm run dev --workspace @gbi/server\" \"npm run dev --workspace @gbi/web\"",
     "dev:web": "npm run dev --workspace @gbi/web",
     "dev:server": "npm run dev --workspace @gbi/server",
     "build": "npm run build --workspace @gbi/web",
     "test": "npm test --workspace @gbi/kern",
-    "typecheck": "npm run typecheck --workspaces --if-present"
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "start": "npm run build && npm run start --workspace @gbi/server",
+    "check": "npm run typecheck && npm test && npm run build"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.4"
   }
 }
