@@ -122,3 +122,18 @@ describe("Projektberechnung", () => {
     expect(e.gelaendeschnitt.length).toBeGreaterThan(10);
   });
 });
+
+describe("Erdmassen", () => {
+  it("Konstanter Damm: V = L · h · (b + n·h)", async () => {
+    const { schaetzeErdmassen } = await import("../src");
+    const g = new Gradiente([
+      { station: 0, hoehe: 102 },
+      { station: 100, hoehe: 102 },
+    ]);
+    const gelaende = [0, 25, 50, 75, 100].map((station) => ({ station, hoehe: 100 }));
+    const m = schaetzeErdmassen(g, gelaende, { kronenbreite: 10, boeschung: 1.5 });
+    expect(m.auftrag).toBeCloseTo(100 * 2 * (10 + 1.5 * 2), 9);
+    expect(m.abtrag).toBe(0);
+    expect(m.maxDamm).toBeCloseTo(2, 9);
+  });
+});

@@ -1,0 +1,24 @@
+{
+  "name": "@gbi/server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "API-Server: KI-Planungsassistent (Claude) und Projektdienste",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.129.0",
+    "@gbi/kern": "0.1.0",
+    "express": "^5.1.0",
+    "zod": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  }
+}

@@ -11,3 +11,4 @@ export * from "./landxml";
 export * from "./projekt";
 export * from "./beispiel";
 export * from "./format";
+export * from "./massen";
