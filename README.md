@@ -71,6 +71,18 @@ npm run check        # Typprüfung + Tests + Build (wie die CI)
 npm start            # Web-App bauen und über den Server ausliefern (http://localhost:8787)
 ```
 
+## KI-Entwickler (Bot)
+
+Änderungswünsche setzt ein KI-Entwickler (Claude Code als GitHub Action) um:
+
+1. **Auftrag:** Issue mit der Vorlage „Änderungswunsch“ anlegen (setzt das Label `ki-entwickler`).
+2. **Umsetzung:** Der Bot legt einen Zweig `ki/…` an, ändert den Code und ergänzt Tests.
+3. **Test:** `npm run check` muss fehlerfrei laufen; zusätzlich prüft die CI den Pull Request.
+4. **Vorlage:** Der Bot öffnet einen Pull Request mit Beschreibung und offenen Punkten. Nachbesserungen per Kommentar `@claude …`.
+5. **Freigabe:** Eine Person prüft und mergt. Danach erstellt der Workflow „Freigabe“ ein Release mit dem Web-App-Build.
+
+Einrichtung: Repository-Secret `ANTHROPIC_API_KEY` anlegen und die Claude GitHub App installieren (https://github.com/apps/claude). Arbeitsregeln des Bots: `CLAUDE.md`.
+
 ## Aufbau
 
 ```

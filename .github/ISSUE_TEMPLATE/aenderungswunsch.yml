@@ -1,0 +1,53 @@
+name: Änderungswunsch für den KI-Entwickler
+description: Neue Funktion oder Fehlerbehebung, die der KI-Entwickler umsetzt, testet und als Pull Request vorlegt.
+title: "[Änderung] "
+labels: ["ki-entwickler"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Der KI-Entwickler startet automatisch, sobald dieses Issue angelegt ist.
+        Er legt einen Zweig `ki/…` an, setzt die Änderung um, führt `npm run check` aus und öffnet einen Pull Request.
+        **Freigabe:** Erst wenn eine Person den Pull Request geprüft und gemergt hat, wird ein Release erstellt.
+        Rückfragen oder Nachbesserungen: einfach `@claude …` kommentieren.
+  - type: dropdown
+    id: art
+    attributes:
+      label: Art
+      options: [Neue Funktion, Fehlerbehebung, Verbesserung, Dokumentation]
+    validations:
+      required: true
+  - type: dropdown
+    id: bereich
+    attributes:
+      label: Bereich
+      multiple: true
+      options:
+        - Rechenkern (packages/kern)
+        - Web-App (apps/web)
+        - Server / KI-Assistent (apps/server)
+        - Pläne / DXF
+        - Import / Export
+        - Weiß nicht
+  - type: textarea
+    id: beschreibung
+    attributes:
+      label: Was soll geändert werden?
+      description: Möglichst konkret – was soll die Software danach können, und warum?
+    validations:
+      required: true
+  - type: textarea
+    id: akzeptanz
+    attributes:
+      label: Woran erkennen wir, dass es fertig ist?
+      description: Akzeptanzkriterien, z. B. Beispielwerte, erwartete Ergebnisse, Referenz aus VESTRA.
+      placeholder: |
+        - Bei R = 300 m und EKL 3 erscheint keine Warnung
+        - Export enthält Layer XY
+    validations:
+      required: true
+  - type: textarea
+    id: hinweise
+    attributes:
+      label: Hinweise, Dateien, Referenzen
+      description: Regelwerksstellen, Beispieldateien, Screenshots …

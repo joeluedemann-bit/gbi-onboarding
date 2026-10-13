@@ -1,0 +1,42 @@
+# Freigabe: Nach dem Merge eines geprüften Pull Requests in den Hauptzweig wird
+# der Stand erneut vollständig geprüft und als GitHub-Release veröffentlicht
+# (Web-App-Build als ZIP angehängt). Manuell auslösbar über „Run workflow“.
+name: Freigabe
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+concurrency:
+  group: freigabe
+  cancel-in-progress: false
+
+jobs:
+  freigeben:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+      - name: Prüfen (Typprüfung, Tests, Build)
+        run: npm run check
+
+      - name: Release erstellen
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          version=$(node -p "require('./package.json').version")
+          tag="v${version}-build.${GITHUB_RUN_NUMBER}"
+          (cd apps/web/dist && zip -qr "../../../gbi-strassenplanung-web-${tag}.zip" .)
+          gh release create "$tag" "gbi-strassenplanung-web-${tag}.zip" \
+            --target "$GITHUB_SHA" \
+            --title "GBI Straßenplanung ${tag}" \
+            --generate-notes
